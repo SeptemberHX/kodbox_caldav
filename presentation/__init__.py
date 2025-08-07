@@ -6,11 +6,9 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from functools import wraps
 from threading import Thread
-from typing import Optional
 
 from flask import Flask, request, Response, jsonify
 from xml.etree.ElementTree import Element, SubElement, tostring, register_namespace
-import xml.etree.ElementTree as ET
 
 from config import Config
 from application import CalDAVService, DataSyncService

@@ -1,5 +1,4 @@
 .idea
-config.py
 CLAUDE.md
 venv
 *.log
