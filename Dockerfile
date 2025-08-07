@@ -5,7 +5,8 @@ FROM python:3.11-slim
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONPATH=/app
 
 # Create app user
 RUN groupadd -r app && useradd -r -g app app
@@ -35,4 +36,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 EXPOSE 5082
 
 # Default command
-CMD ["python", "main.py", "--host", "0.0.0.0", "--port", "5082"]
+CMD ["python", "main.py"]

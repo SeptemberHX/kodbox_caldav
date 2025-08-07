@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """KodBox CalDAV Server - Simple startup script."""
 
+import sys
+import os
+
+# Add current directory to Python path for Docker compatibility
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from config import load_config
 from presentation import create_app
 
