@@ -1,0 +1,7 @@
+.idea
+config.py
+CLAUDE.md
+venv
+*.log
+__pycache__
+.env

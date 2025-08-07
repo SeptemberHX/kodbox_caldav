@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  kodbox-caldav:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5082:5082"
+    environment:
+      # KodBox Configuration
+      - KODBOX_BASE_URL=${KODBOX_BASE_URL:-https://your-kodbox.com/}
+      - KODBOX_ACCESS_TOKEN=${KODBOX_ACCESS_TOKEN}
+      - KODBOX_USERNAME=${KODBOX_USERNAME:-}
+      - KODBOX_PASSWORD=${KODBOX_PASSWORD:-}
+      - KODBOX_TIMEOUT=${KODBOX_TIMEOUT:-30}
+      
+      # CalDAV Configuration
+      - CALDAV_USERNAME=${CALDAV_USERNAME:-kodbox}
+      - CALDAV_PASSWORD=${CALDAV_PASSWORD:-calendar123}
+      - CALDAV_REALM=${CALDAV_REALM:-KodBox CalDAV Server}
+      
+      # Server Configuration
+      - SERVER_HOST=${SERVER_HOST:-0.0.0.0}
+      - SERVER_PORT=${SERVER_PORT:-5082}
+      - SERVER_DEBUG=${SERVER_DEBUG:-false}
+      - SERVER_WORKERS=${SERVER_WORKERS:-2}
+      
+      # Sync Configuration
+      - SYNC_INTERVAL=${SYNC_INTERVAL:-300}
+      - SYNC_MAX_RETRIES=${SYNC_MAX_RETRIES:-3}
+      - SYNC_RETRY_DELAY=${SYNC_RETRY_DELAY:-60}
+      - SYNC_CACHE_MAX_AGE=${SYNC_CACHE_MAX_AGE:-10}
+      
+      # Logging Configuration
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FILE=${LOG_FILE:-logs/kodbox-caldav.log}
+    volumes:
+      - ./logs:/app/logs:rw
+      - ./data:/app/data:rw
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
