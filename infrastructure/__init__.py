@@ -311,28 +311,25 @@ class CalendarRepository(CalendarRepository):
                 # All-day event: only one of start_time or end_time is set
                 task_datetime = task.start_time or task.end_time
                 
-                # For all-day events, we need to be very careful with timezone handling
-                # Some clients (like Huawei Calendar) may interpret dates differently
-                
-                # Get the date in local timezone (assuming KodBox timestamps are in local time)
+                # Convert to China timezone before extracting date to avoid date shift issues
+                china_tz = timezone(timedelta(hours=8))
                 if task_datetime.tzinfo is None:
-                    # If no timezone info, datetime.fromtimestamp already used local timezone
+                    # If no timezone info, assume it's already in China timezone
                     event_date = task_datetime.date()
                 else:
-                    # Convert to local timezone, then extract date
-                    china_tz = timezone(timedelta(hours=8))
-                    local_datetime = task_datetime.astimezone(china_tz)
-                    event_date = local_datetime.date()
+                    # Convert to China timezone, then extract date
+                    china_datetime = task_datetime.astimezone(china_tz)
+                    event_date = china_datetime.date()
                 
-                # For all-day events, use VALUE=DATE
-                from icalendar import vDate
+                # For all-day events, use VALUE=DATE and end date should be next day
+                from icalendar import vDatetime, vDate
                 event.add('dtstart', vDate(event_date))
                 event['dtstart'].params['VALUE'] = 'DATE'  # Explicitly mark as date-only
                 
-                # For single-day all-day events, some clients work better without DTEND
-                # or with DTEND set to the same day (not next day)
-                # Let's try not setting DTEND for single-day events
-                # If this doesn't work, we can add DTEND back
+                # End date should be the day after for all-day events per RFC5545
+                next_day = event_date + timedelta(days=1)
+                event.add('dtend', vDate(next_day))
+                event['dtend'].params['VALUE'] = 'DATE'  # Explicitly mark as date-only
                 
                 # Add additional properties that some clients require for all-day events
                 event.add('transp', 'TRANSPARENT')  # Mark as free time (not busy)
