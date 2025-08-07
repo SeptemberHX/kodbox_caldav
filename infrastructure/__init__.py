@@ -309,7 +309,17 @@ class CalendarRepository(CalendarRepository):
             # Check if this should be an all-day event
             if (task.start_time and not task.end_time) or (task.end_time and not task.start_time):
                 # All-day event: only one of start_time or end_time is set
-                event_date = (task.start_time or task.end_time).date()
+                task_datetime = task.start_time or task.end_time
+                
+                # Convert to China timezone before extracting date to avoid date shift issues
+                china_tz = timezone(timedelta(hours=8))
+                if task_datetime.tzinfo is None:
+                    # If no timezone info, assume it's already in China timezone
+                    event_date = task_datetime.date()
+                else:
+                    # Convert to China timezone, then extract date
+                    china_datetime = task_datetime.astimezone(china_tz)
+                    event_date = china_datetime.date()
                 
                 # For all-day events, use VALUE=DATE and end date should be next day
                 from icalendar import vDatetime, vDate
@@ -328,8 +338,19 @@ class CalendarRepository(CalendarRepository):
                 event.add('sequence', 0)  # Version number
             elif task.start_time and task.end_time:
                 # Timed event: both start and end times are set
-                event.add('dtstart', task.start_time.replace(tzinfo=china_tz))
-                event.add('dtend', task.end_time.replace(tzinfo=china_tz))
+                # Ensure both times have timezone info (China timezone)
+                if task.start_time.tzinfo is None:
+                    start_time = task.start_time.replace(tzinfo=china_tz)
+                else:
+                    start_time = task.start_time.astimezone(china_tz)
+                
+                if task.end_time.tzinfo is None:
+                    end_time = task.end_time.replace(tzinfo=china_tz)
+                else:
+                    end_time = task.end_time.astimezone(china_tz)
+                
+                event.add('dtstart', start_time)
+                event.add('dtend', end_time)
                 
                 # Add standard properties for timed events
                 event.add('transp', 'OPAQUE')  # Mark as busy time
