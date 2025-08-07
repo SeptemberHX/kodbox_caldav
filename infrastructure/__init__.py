@@ -312,14 +312,8 @@ class CalendarRepository(CalendarRepository):
                 task_datetime = task.start_time or task.end_time
                 
                 # Convert to China timezone before extracting date to avoid date shift issues
-                china_tz = timezone(timedelta(hours=8))
-                if task_datetime.tzinfo is None:
-                    # If no timezone info, assume it's already in China timezone
-                    event_date = task_datetime.date()
-                else:
-                    # Convert to China timezone, then extract date
-                    china_datetime = task_datetime.astimezone(china_tz)
-                    event_date = china_datetime.date()
+                china_datetime = task_datetime.astimezone(china_tz)
+                event_date = china_datetime.date()
                 
                 # For all-day events, use VALUE=DATE and end date should be next day
                 from icalendar import vDatetime, vDate
