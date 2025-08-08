@@ -264,6 +264,75 @@ class CalendarRepository(CalendarRepository):
             # Fallback: just remove HTML tags
             return re.sub(r'<[^>]+>', '', html_content or "").strip()
     
+    def _add_alarms_to_event(self, event, task: Task) -> None:
+        """Add alarm/reminder components to the event based on task properties."""
+        try:
+            from icalendar import Alarm
+            
+            # Determine reminder times based on priority
+            reminder_minutes = []
+            
+            if task.priority:
+                if task.priority.value in ['very-hight', 'hight']:  # 非常紧急 or 紧急
+                    # High priority: multiple reminders
+                    reminder_minutes = [0, 15, 60, 1440]  # 0min, 15min, 1hr, 1day before
+                elif task.priority.value == 'normal':  # 普通
+                    # Normal priority: standard reminder
+                    reminder_minutes = [15, 60]  # 15min, 1hr before
+                elif task.priority.value in ['low', 'very-low']:  # 较低 or 最低
+                    # Low priority: minimal reminder
+                    reminder_minutes = [60]  # 1hr before
+            else:
+                # No priority set: default reminder
+                reminder_minutes = [15]  # 15min before
+            
+            # Add reminders only if the task has a start time
+            if task.start_time:
+                for minutes in reminder_minutes:
+                    alarm = Alarm()
+                    
+                    # Set alarm action
+                    alarm.add('action', 'DISPLAY')
+                    
+                    # Set alarm description
+                    alarm_description = f"提醒: {task.name}"
+                    if minutes == 0:
+                        alarm_description += " (现在开始)"
+                    elif minutes < 60:
+                        alarm_description += f" ({minutes}分钟后开始)"
+                    elif minutes < 1440:
+                        hours = minutes // 60
+                        alarm_description += f" ({hours}小时后开始)"
+                    else:
+                        days = minutes // 1440
+                        alarm_description += f" ({days}天后开始)"
+                    
+                    alarm.add('description', alarm_description)
+                    
+                    # Set trigger time (negative duration means "before")
+                    if minutes == 0:
+                        # At event start time
+                        alarm.add('trigger', 'PT0M')
+                    elif minutes < 60:
+                        # Minutes before
+                        alarm.add('trigger', f'-PT{minutes}M')
+                    elif minutes < 1440:
+                        # Hours before
+                        hours = minutes // 60
+                        alarm.add('trigger', f'-PT{hours}H')
+                    else:
+                        # Days before
+                        days = minutes // 1440
+                        alarm.add('trigger', f'-P{days}D')
+                    
+                    # Add alarm to event
+                    event.add_component(alarm)
+                    
+                    self.logger.debug(f"Added {minutes}-minute reminder for task {task.id}")
+            
+        except Exception as e:
+            self.logger.warning(f"Failed to add alarms for task {task.id}: {e}")
+    
     async def get_calendar_data(self, project: Project) -> str:
         """Generate iCalendar data for entire project."""
         try:
@@ -397,6 +466,9 @@ class CalendarRepository(CalendarRepository):
             
             # Always set dtstamp to current time
             event.add('dtstamp', datetime.now(china_tz))
+            
+            # Add reminders based on task priority and time settings
+            self._add_alarms_to_event(event, task)
             
             return event
             
