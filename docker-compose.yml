@@ -10,9 +10,8 @@ services:
     environment:
       # KodBox Configuration
       - KODBOX_BASE_URL=${KODBOX_BASE_URL:-https://your-kodbox.com/}
-      - KODBOX_ACCESS_TOKEN=${KODBOX_ACCESS_TOKEN}
-      - KODBOX_USERNAME=${KODBOX_USERNAME:-}
-      - KODBOX_PASSWORD=${KODBOX_PASSWORD:-}
+      - KODBOX_USERNAME=${KODBOX_USERNAME}
+      - KODBOX_PASSWORD=${KODBOX_PASSWORD}
       - KODBOX_TIMEOUT=${KODBOX_TIMEOUT:-30}
       
       # CalDAV Configuration

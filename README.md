@@ -71,7 +71,9 @@ The server supports multiple configuration methods (in order of precedence):
 ```bash
 # KodBox Configuration
 KODBOX_BASE_URL=https://your-kodbox.com/
-KODBOX_ACCESS_TOKEN=your_access_token
+KODBOX_USERNAME=your_kodbox_username
+KODBOX_PASSWORD=your_kodbox_password
+KODBOX_TIMEOUT=30
 
 # CalDAV Authentication
 CALDAV_USERNAME=kodbox
@@ -92,7 +94,9 @@ SYNC_INTERVAL=300  # 5 minutes
 {
   "kodbox": {
     "base_url": "https://your-kodbox.com/",
-    "access_token": "your_access_token"
+    "username": "your_kodbox_username",
+    "password": "your_kodbox_password",
+    "timeout": 30
   },
   "caldav": {
     "username": "kodbox",
