@@ -1,7 +1,7 @@
 """Domain entities for the KodBox CalDAV server."""
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, List, Any
 from enum import Enum
 
@@ -69,25 +69,29 @@ class Task:
         
         if meta_info.get('timeFrom'):
             try:
-                start_time = datetime.fromtimestamp(int(meta_info['timeFrom']))
+                # KodBox timestamps are in UTC, convert to timezone-aware datetime
+                start_time = datetime.fromtimestamp(int(meta_info['timeFrom']), tz=timezone.utc)
             except (ValueError, TypeError):
                 pass
                 
         if meta_info.get('timeTo'):
             try:
-                end_time = datetime.fromtimestamp(int(meta_info['timeTo']))
+                # KodBox timestamps are in UTC, convert to timezone-aware datetime
+                end_time = datetime.fromtimestamp(int(meta_info['timeTo']), tz=timezone.utc)
             except (ValueError, TypeError):
                 pass
         
         if data.get('createTime'):
             try:
-                created_at = datetime.fromtimestamp(int(data['createTime']))
+                # KodBox timestamps are in UTC, convert to timezone-aware datetime
+                created_at = datetime.fromtimestamp(int(data['createTime']), tz=timezone.utc)
             except (ValueError, TypeError):
                 pass
                 
         if data.get('modifyTime'):
             try:
-                modified_at = datetime.fromtimestamp(int(data['modifyTime']))
+                # KodBox timestamps are in UTC, convert to timezone-aware datetime
+                modified_at = datetime.fromtimestamp(int(data['modifyTime']), tz=timezone.utc)
             except (ValueError, TypeError):
                 pass
         
@@ -170,13 +174,15 @@ class Project:
         
         if data.get('createTime'):
             try:
-                created_at = datetime.fromtimestamp(int(data['createTime']))
+                # KodBox timestamps are in UTC, convert to timezone-aware datetime
+                created_at = datetime.fromtimestamp(int(data['createTime']), tz=timezone.utc)
             except (ValueError, TypeError):
                 pass
                 
         if data.get('modifyTime'):
             try:
-                modified_at = datetime.fromtimestamp(int(data['modifyTime']))
+                # KodBox timestamps are in UTC, convert to timezone-aware datetime
+                modified_at = datetime.fromtimestamp(int(data['modifyTime']), tz=timezone.utc)
             except (ValueError, TypeError):
                 pass
         

@@ -333,8 +333,18 @@ class CalendarRepository(CalendarRepository):
             elif task.start_time and task.end_time:
                 # Timed event: both start and end times are set
                 # Ensure both times have timezone info (China timezone)
-                start_time = task.start_time.replace(tzinfo=china_tz)
-                end_time = task.end_time.replace(tzinfo=china_tz)
+                # Since KodBox timestamps are now in UTC, convert them properly
+                if task.start_time.tzinfo is None:
+                    # This shouldn't happen now, but handle it just in case
+                    start_time = task.start_time.replace(tzinfo=timezone.utc).astimezone(china_tz)
+                else:
+                    start_time = task.start_time.astimezone(china_tz)
+                
+                if task.end_time.tzinfo is None:
+                    # This shouldn't happen now, but handle it just in case
+                    end_time = task.end_time.replace(tzinfo=timezone.utc).astimezone(china_tz)
+                else:
+                    end_time = task.end_time.astimezone(china_tz)
                 
                 event.add('dtstart', start_time)
                 event.add('dtend', end_time)
@@ -347,10 +357,20 @@ class CalendarRepository(CalendarRepository):
             
             # Creation and modification times
             if task.created_at:
-                event.add('created', task.created_at.replace(tzinfo=china_tz))
+                # created_at is now timezone-aware UTC, convert to China timezone
+                if task.created_at.tzinfo is None:
+                    created_time = task.created_at.replace(tzinfo=timezone.utc).astimezone(china_tz)
+                else:
+                    created_time = task.created_at.astimezone(china_tz)
+                event.add('created', created_time)
             
             if task.modified_at:
-                event.add('last-modified', task.modified_at.replace(tzinfo=china_tz))
+                # modified_at is now timezone-aware UTC, convert to China timezone
+                if task.modified_at.tzinfo is None:
+                    modified_time = task.modified_at.replace(tzinfo=timezone.utc).astimezone(china_tz)
+                else:
+                    modified_time = task.modified_at.astimezone(china_tz)
+                event.add('last-modified', modified_time)
             
             # Always set dtstamp to current time
             event.add('dtstamp', datetime.now(china_tz))
