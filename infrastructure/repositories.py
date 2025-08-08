@@ -6,6 +6,8 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Dict, Any
 from icalendar import Calendar, Event
 import uuid
+import re
+import html
 
 from domain import Project, Task, ProjectRepository, CalendarRepository
 
@@ -216,6 +218,52 @@ class CalendarRepository(CalendarRepository):
     def __init__(self):
         self.logger = logging.getLogger(__name__)
     
+    def _html_to_text(self, html_content: str) -> str:
+        """Convert HTML fragment to plain text."""
+        if not html_content:
+            return ""
+        
+        try:
+            # Decode HTML entities first
+            text = html.unescape(html_content)
+            
+            # Replace common HTML tags with appropriate text formatting
+            # Convert <br>, <br/>, <br /> to newlines
+            text = re.sub(r'<br\s*/?>', '\n', text, flags=re.IGNORECASE)
+            
+            # Convert <p> tags to double newlines (paragraph breaks)
+            text = re.sub(r'<p[^>]*>', '\n\n', text, flags=re.IGNORECASE)
+            text = re.sub(r'</p>', '', text, flags=re.IGNORECASE)
+            
+            # Convert <div> tags to newlines
+            text = re.sub(r'<div[^>]*>', '\n', text, flags=re.IGNORECASE)
+            text = re.sub(r'</div>', '', text, flags=re.IGNORECASE)
+            
+            # Preserve links by showing URL
+            text = re.sub(r'<a[^>]*href=["\']([^"\']*)["\'][^>]*>(.*?)</a>', 
+                         r'\2 (\1)', text, flags=re.IGNORECASE)
+            
+            # Remove all other HTML tags
+            text = re.sub(r'<[^>]+>', '', text)
+            
+            # Clean up whitespace
+            # Replace multiple consecutive newlines with at most 2
+            text = re.sub(r'\n{3,}', '\n\n', text)
+            
+            # Remove leading/trailing whitespace from each line
+            lines = [line.strip() for line in text.split('\n')]
+            text = '\n'.join(lines)
+            
+            # Remove leading/trailing whitespace from entire text
+            text = text.strip()
+            
+            return text
+            
+        except Exception as e:
+            self.logger.warning(f"Failed to convert HTML to text: {e}")
+            # Fallback: just remove HTML tags
+            return re.sub(r'<[^>]+>', '', html_content or "").strip()
+    
     async def get_calendar_data(self, project: Project) -> str:
         """Generate iCalendar data for entire project."""
         try:
@@ -270,38 +318,13 @@ class CalendarRepository(CalendarRepository):
             event.add('uid', f'kodbox-task-{task.id}@kodbox.local')
             event.add('summary', task.name)
             
-            # Description with task details
-            description_parts = []
+            # Description - convert HTML to plain text
+            description = ""
             if task.description:
-                description_parts.append(task.description)
+                description = self._html_to_text(task.description)
             
-            description_parts.append(f"Project: {project.name}")
-            
-            if task.priority:
-                priority_map = {
-                    'very-low': '最低',
-                    'low': '较低', 
-                    'normal': '普通',
-                    'hight': '紧急',
-                    'very-hight': '非常紧急'
-                }
-                priority_name = priority_map.get(task.priority.value, task.priority.value)
-                description_parts.append(f"优先级: {priority_name}")
-            
-            if task.status:
-                status_map = {
-                    'ready': '未开始',
-                    'doing': '进行中',
-                    'finished': '已完成',
-                    'closed': '已关闭'
-                }
-                status_name = status_map.get(task.status.value, task.status.value)
-                description_parts.append(f"状态: {status_name}")
-            
-            if task.tags:
-                description_parts.append(f"标签: {', '.join(task.tags)}")
-            
-            event.add('description', '\\n'.join(description_parts))
+            if description:
+                event.add('description', description)
             
             # Time information
             china_tz = timezone(timedelta(hours=8))
