@@ -291,8 +291,15 @@ class CalendarRepository(CalendarRepository):
                 for minutes in reminder_minutes:
                     alarm = Alarm()
                     
-                    # Set alarm action
-                    alarm.add('action', 'DISPLAY')
+                    # Set alarm action based on priority - high priority gets AUDIO alarms
+                    if task.priority and task.priority.value in ['very-hight', 'hight']:
+                        # High priority: use AUDIO alarm for important reminder (like alarm clock)
+                        alarm.add('action', 'AUDIO')
+                        # For AUDIO alarms, we can add a sound file (optional)
+                        # alarm.add('attach', 'Basso')  # macOS sound name
+                    else:
+                        # Normal/low priority: use DISPLAY alarm (notification only)
+                        alarm.add('action', 'DISPLAY')
                     
                     # Set alarm description
                     alarm_description = f"提醒: {task.name}"
@@ -380,6 +387,18 @@ class CalendarRepository(CalendarRepository):
             # Basic event info
             event.add('uid', f'kodbox-task-{task.id}@kodbox.local')
             event.add('summary', task.name)
+            
+            # Set event priority for important reminders (affects alarm behavior)
+            if task.priority:
+                if task.priority.value in ['very-hight', 'hight']:  # 非常紧急 or 紧急
+                    event.add('priority', 1)  # High priority (1-4 = high)
+                elif task.priority.value == 'normal':  # 普通
+                    event.add('priority', 5)  # Normal priority (5 = normal)
+                elif task.priority.value in ['low', 'very-low']:  # 较低 or 最低
+                    event.add('priority', 9)  # Low priority (6-9 = low)
+            else:
+                # No priority set: default to normal
+                event.add('priority', 5)  # Normal priority
             
             # Description - convert HTML to plain text
             description = ""
