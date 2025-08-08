@@ -45,6 +45,8 @@ class CalDAVConfig:
     username: str = "kodbox"
     password: str = "calendar123"
     realm: str = "KodBox CalDAV Server"
+    # Public subscription tokens for Outlook/webcal support
+    public_tokens: str = ""  # Comma-separated list of tokens
 
 
 @dataclass 
@@ -100,7 +102,8 @@ class Config:
         caldav_config = CalDAVConfig(
             username=os.getenv('CALDAV_USERNAME', 'kodbox'),
             password=os.getenv('CALDAV_PASSWORD', 'calendar123'),
-            realm=os.getenv('CALDAV_REALM', 'KodBox CalDAV Server')
+            realm=os.getenv('CALDAV_REALM', 'KodBox CalDAV Server'),
+            public_tokens=os.getenv('CALDAV_PUBLIC_TOKENS', '')
         )
         
         # Server configuration
@@ -162,7 +165,8 @@ class Config:
             caldav_config = CalDAVConfig(
                 username=caldav_data.get('username', 'kodbox'),
                 password=caldav_data.get('password', 'calendar123'),
-                realm=caldav_data.get('realm', 'KodBox CalDAV Server')
+                realm=caldav_data.get('realm', 'KodBox CalDAV Server'),
+                public_tokens=caldav_data.get('public_tokens', '')
             )
             
             # Server configuration
@@ -217,7 +221,8 @@ class Config:
             'caldav': {
                 'username': self.caldav.username,
                 'password': self.caldav.password,
-                'realm': self.caldav.realm
+                'realm': self.caldav.realm,
+                'public_tokens': self.caldav.public_tokens
             },
             'server': {
                 'host': self.server.host,

@@ -78,6 +78,8 @@ KODBOX_TIMEOUT=30
 # CalDAV Authentication
 CALDAV_USERNAME=kodbox
 CALDAV_PASSWORD=calendar123
+# Public subscription tokens for Outlook/webcal support
+CALDAV_PUBLIC_TOKENS=token123,outlook456
 
 # Server Settings
 SERVER_HOST=0.0.0.0
@@ -100,7 +102,8 @@ SYNC_INTERVAL=300  # 5 minutes
   },
   "caldav": {
     "username": "kodbox",
-    "password": "calendar123"
+    "password": "calendar123",
+    "public_tokens": "token123,outlook456"
   },
   "server": {
     "host": "0.0.0.0",
@@ -111,6 +114,29 @@ SYNC_INTERVAL=300  # 5 minutes
 ```
 
 ## CalDAV Client Setup
+
+### Microsoft Outlook (Webcal Subscription)
+
+**Outlook only supports webcal:// subscriptions, not full CalDAV authentication.**
+
+1. **Configure subscription tokens** in your server:
+   ```bash
+   # Set public tokens for webcal access
+   CALDAV_PUBLIC_TOKENS=your_secret_token,another_token
+   ```
+
+2. **Get subscription links**:
+   - Visit: `http://your-server:5082/subscribe/your_secret_token/`
+   - This will show all available calendar subscription links
+
+3. **Add to Outlook**:
+   - Copy a `webcal://` link from the subscription page
+   - In Outlook: Calendar → Add Calendar → Subscribe from web
+   - Paste the webcal link and click Import
+
+**Available subscription formats:**
+- All projects: `webcal://your-server:5082/subscribe/your_token/all.ics`
+- Individual project: `webcal://your-server:5082/subscribe/your_token/PROJECT_ID.ics`
 
 ### iOS/macOS Calendar
 

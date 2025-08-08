@@ -201,6 +201,167 @@ def create_app(config: Config) -> Flask:
             'cache_fresh': data_sync_service.is_cache_fresh()
         })
     
+    # Public ICS subscription endpoints for Outlook/webcal compatibility
+    def validate_subscription_token(token: str) -> bool:
+        """Validate public subscription token."""
+        if not config.caldav.public_tokens:
+            return False
+        valid_tokens = [t.strip() for t in config.caldav.public_tokens.split(',') if t.strip()]
+        return token in valid_tokens
+    
+    @app.route('/subscribe/<token>/<project_id>.ics', methods=['GET'])
+    def public_project_calendar(token: str, project_id: str):
+        """Public ICS subscription for a specific project - for Outlook compatibility."""
+        # Validate subscription token
+        if not validate_subscription_token(token):
+            return Response('Invalid subscription token', status=403)
+        
+        try:
+            # Get calendar data using the service
+            calendar_data = async_executor.run_async(caldav_service.get_calendar_data(project_id))
+            
+            if not calendar_data:
+                return Response('Project not found', status=404)
+            
+            return Response(
+                calendar_data,
+                mimetype='text/calendar; charset=utf-8',
+                headers={
+                    'Content-Disposition': f'attachment; filename="{project_id}.ics"',
+                    'Cache-Control': f'max-age={config.sync.interval_seconds}',
+                    'Access-Control-Allow-Origin': '*'  # Allow cross-origin for webcal
+                }
+            )
+        except Exception as e:
+            logger.error(f"Failed to generate public calendar for project {project_id}: {e}")
+            return Response('Internal server error', status=500)
+    
+    @app.route('/subscribe/<token>/all.ics', methods=['GET'])
+    def public_all_calendars(token: str):
+        """Public ICS subscription for all projects combined - for Outlook compatibility."""
+        # Validate subscription token
+        if not validate_subscription_token(token):
+            return Response('Invalid subscription token', status=403)
+        
+        try:
+            from icalendar import Calendar as ICalCalendar
+            
+            # Create combined calendar
+            combined_cal = ICalCalendar()
+            combined_cal.add('prodid', '-//KodBox CalDAV Server//kodbox_caldav//EN')
+            combined_cal.add('version', '2.0')
+            combined_cal.add('calscale', 'GREGORIAN')
+            combined_cal.add('method', 'PUBLISH')
+            combined_cal.add('x-wr-calname', 'All KodBox Projects')
+            combined_cal.add('x-wr-caldesc', 'Combined calendar from all KodBox projects')
+            
+            # Get all projects and their calendars
+            projects = data_sync_service.get_all_projects()
+            
+            for project in projects:
+                try:
+                    # Get project calendar data and parse it
+                    project_cal_data = async_executor.run_async(caldav_service.get_calendar_data(project.id))
+                    if project_cal_data:
+                        project_cal = ICalCalendar.from_ical(project_cal_data)
+                        # Add all events from this project to the combined calendar
+                        for component in project_cal.walk():
+                            if component.name == "VEVENT":
+                                combined_cal.add_component(component)
+                except Exception as e:
+                    logger.warning(f"Failed to include project {project.id} in combined calendar: {e}")
+                    continue
+            
+            calendar_data = combined_cal.to_ical().decode('utf-8')
+            
+            return Response(
+                calendar_data,
+                mimetype='text/calendar; charset=utf-8',
+                headers={
+                    'Content-Disposition': 'attachment; filename="kodbox-all.ics"',
+                    'Cache-Control': f'max-age={config.sync.interval_seconds}',
+                    'Access-Control-Allow-Origin': '*'  # Allow cross-origin for webcal
+                }
+            )
+        except Exception as e:
+            logger.error(f"Failed to generate combined public calendar: {e}")
+            return Response('Internal server error', status=500)
+    
+    @app.route('/subscribe/<token>/', methods=['GET'])
+    def subscription_info(token: str):
+        """Show available subscription links for valid token."""
+        # Validate subscription token
+        if not validate_subscription_token(token):
+            return Response('Invalid subscription token', status=403)
+        
+        try:
+            projects = data_sync_service.get_all_projects()
+            base_url = f"http://{config.server.host}:{config.server.port}"
+            
+            html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>KodBox Calendar Subscriptions</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; margin: 40px; }}
+                    .subscription-link {{ 
+                        background: #f5f5f5; 
+                        padding: 10px; 
+                        margin: 10px 0; 
+                        border-radius: 5px; 
+                        font-family: monospace;
+                    }}
+                    .instructions {{ 
+                        background: #e7f3ff; 
+                        padding: 15px; 
+                        margin: 20px 0; 
+                        border-radius: 5px; 
+                    }}
+                </style>
+            </head>
+            <body>
+                <h1>KodBox Calendar Subscriptions</h1>
+                
+                <div class="instructions">
+                    <h3>How to add to Outlook:</h3>
+                    <ol>
+                        <li>Copy one of the webcal:// links below</li>
+                        <li>In Outlook, go to Calendar → Add Calendar → Subscribe from web</li>
+                        <li>Paste the webcal:// link and click Import</li>
+                    </ol>
+                </div>
+                
+                <h2>Available Calendars:</h2>
+                
+                <h3>All Projects Combined:</h3>
+                <div class="subscription-link">
+                    webcal://{config.server.host}:{config.server.port}/subscribe/{token}/all.ics
+                </div>
+                
+                <h3>Individual Projects:</h3>
+            """
+            
+            for project in projects:
+                webcal_url = f"webcal://{config.server.host}:{config.server.port}/subscribe/{token}/{project.id}.ics"
+                html += f"""
+                <div>
+                    <strong>{project.name}</strong><br>
+                    <div class="subscription-link">{webcal_url}</div>
+                </div>
+                """
+            
+            html += """
+            </body>
+            </html>
+            """
+            
+            return Response(html, mimetype='text/html')
+            
+        except Exception as e:
+            logger.error(f"Failed to generate subscription info: {e}")
+            return Response('Internal server error', status=500)
+    
     # CalDAV service discovery
     @app.route('/.well-known/caldav', methods=['GET', 'PROPFIND'])
     def caldav_discovery():

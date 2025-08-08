@@ -18,6 +18,7 @@ services:
       - CALDAV_USERNAME=${CALDAV_USERNAME:-kodbox}
       - CALDAV_PASSWORD=${CALDAV_PASSWORD:-calendar123}
       - CALDAV_REALM=${CALDAV_REALM:-KodBox CalDAV Server}
+      - CALDAV_PUBLIC_TOKENS=${CALDAV_PUBLIC_TOKENS:-}
       
       # Server Configuration
       - SERVER_HOST=${SERVER_HOST:-0.0.0.0}
