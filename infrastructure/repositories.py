@@ -309,21 +309,15 @@ class CalendarRepository(CalendarRepository):
                     
                     alarm.add('description', alarm_description)
                     
-                    # Set trigger time (negative duration means "before")
+                    # Set trigger time using timedelta (negative means "before")
                     if minutes == 0:
                         # At event start time
-                        alarm.add('trigger', 'PT0M')
-                    elif minutes < 60:
-                        # Minutes before
-                        alarm.add('trigger', f'-PT{minutes}M')
-                    elif minutes < 1440:
-                        # Hours before
-                        hours = minutes // 60
-                        alarm.add('trigger', f'-PT{hours}H')
+                        trigger_delta = timedelta(minutes=0)
                     else:
-                        # Days before
-                        days = minutes // 1440
-                        alarm.add('trigger', f'-P{days}D')
+                        # Before event start time
+                        trigger_delta = timedelta(minutes=-minutes)
+                    
+                    alarm.add('trigger', trigger_delta)
                     
                     # Add alarm to event
                     event.add_component(alarm)
